@@ -11,10 +11,11 @@ st.set_page_config(
     page_title="Breast Cancer Classification",
     page_icon="DC",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
+st.markdown(
+    """
     <style>
     /* Main app background */
     .stApp {
@@ -102,11 +103,16 @@ st.markdown("""
         background-color: #0052cc;
     }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 st.title("🔬 Breast Cancer Histopathology Image Classification")
-st.markdown('<p class="subtitle">Upload a histopathology image for classification</p>', unsafe_allow_html=True)
+st.markdown(
+    '<p class="subtitle">Upload a histopathology image for classification</p>',
+    unsafe_allow_html=True,
+)
 
 
 col1, col2, col3 = st.columns([1, 3, 1])
@@ -117,9 +123,9 @@ with col2:
         "Upload a file",
         type=["png", "jpg", "jpeg", "tif", "tiff"],
         help="Drag and drop your files here or click to upload",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
     )
-    
+
     if uploaded_file is None:
         st.markdown(
             """
@@ -127,16 +133,15 @@ with col2:
                 No items selected
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
-    
 
     if uploaded_file is not None:
 
         st.markdown("### Uploaded Image")
         image = Image.open(uploaded_file)
         st.image(image, use_container_width=True)
-        
+
         # Classification button
         if st.button("Classify Image", type="primary"):
             with st.spinner("Classifying..."):
@@ -144,11 +149,11 @@ with col2:
                 # Example:
                 # from api.app import predict_image
                 # result = predict_image(uploaded_file)
-                
+
                 # Placeholder result
                 st.markdown('<div class="results-container">', unsafe_allow_html=True)
                 st.success("✅ Classification Complete!")
-                
+
                 # Display results (replace with actual model output)
                 st.markdown("#### Prediction Results")
                 col_a, col_b = st.columns(2)
@@ -156,11 +161,10 @@ with col2:
                     st.metric("Classification", "Benign", delta="95% confidence")
                 with col_b:
                     st.metric("Processing Time", "0.3s")
-                
+
                 st.info("here, we link it with the atual model we have trained")
-                st.markdown('</div>', unsafe_allow_html=True)
-        
-        
+                st.markdown("</div>", unsafe_allow_html=True)
+
         if st.button("Upload Another Image"):
             st.rerun()
 
@@ -171,5 +175,5 @@ st.markdown(
         Breast Cancer Histopathology Image Classification System
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
