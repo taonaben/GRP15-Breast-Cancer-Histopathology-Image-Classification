@@ -1,0 +1,49 @@
+Breast Cancer Histopathology Image Classification/
+│
+├── data/
+│   ├── processed/
+│   └── raw/
+│       └── archive/
+│           ├── BreaKHis_v1/
+│           │   └── histology_slides/
+│           │       └── breast/
+│           │           ├── benign/
+│           │           │   ├── SOB/
+│           │           │   │   ├── adenosis/
+│           │           │   │   ├── fibroadenoma/
+│           │           │   │   ├── phyllodes_tumor/
+│           │           │   │   └── tubular_adenoma/
+│           │           │   └── [stat files]
+│           │           └── malignant/
+│           │               └── SOB/
+│           │                   ├── ductal_carcinoma/
+│           │                   ├── lobular_carcinoma/
+│           │                   ├── mucinous_carcinoma/
+│           │                   └── papillary_carcinoma/
+│           └── Folds.csv
+│
+├── frontend/
+│   └── main.py
+│
+├── notebooks/
+│   ├── data_preprocessing.ipynb
+│   ├── model_training.ipynb
+│   ├── logs/
+│   │   ├── fit/
+│   │   ├── train/
+│   │   └── validation/
+│   └── models/
+│       ├── best_model.h5
+│       ├── Breast_Cancer_Histopathology_Image_Classification_model.h5
+│       ├── Breast_Cancer_Histopathology_Image_Classification_model.keras
+│       └── training_log.csv
+│
+├── server/
+│   └── app.py
+│
+├── src/
+│   └── train_model.py
+│
+├── README.md
+└── requirements.txt
+

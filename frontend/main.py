@@ -1,11 +1,10 @@
 import streamlit as st
 import os
 from PIL import Image
-import sys
+import requests
+import io
 
-# from api
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+predict_url = "http://localhost:8000/predict/"
 
 st.set_page_config(
     page_title="Breast Cancer Classification",
@@ -145,25 +144,38 @@ with col2:
         # Classification button
         if st.button("Classify Image", type="primary"):
             with st.spinner("Classifying..."):
-                # TODO: Add your model prediction logic here
-                # Example:
-                # from api.app import predict_image
-                # result = predict_image(uploaded_file)
+                try:
+                    # Call FastAPI backend
+                    uploaded_file.seek(0)
+                    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+                    response = requests.post(predict_url, files=files)
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        
+                        st.markdown('<div class="results-container">', unsafe_allow_html=True)
+                        st.success("✅ Classification Complete!")
 
-                # Placeholder result
-                st.markdown('<div class="results-container">', unsafe_allow_html=True)
-                st.success("✅ Classification Complete!")
+                        # Display results
+                        st.markdown("#### Prediction Results")
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            st.metric(
+                                "Classification", 
+                                result["classification"], 
+                                delta=f"{result['confidence']}% confidence"
+                            )
+                        with col_b:
+                            st.metric("Processing Time", f"{result['processing_time']}s")
 
-                # Display results (replace with actual model output)
-                st.markdown("#### Prediction Results")
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.metric("Classification", "Benign", delta="95% confidence")
-                with col_b:
-                    st.metric("Processing Time", "0.3s")
-
-                st.info("here, we link it with the atual model we have trained")
-                st.markdown("</div>", unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        st.error(f"Error: {response.json().get('detail', 'Unknown error')}")
+                        
+                except requests.exceptions.ConnectionError:
+                    st.error("❌ Cannot connect to API server. Please ensure the FastAPI server is running on http://localhost:8000")
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
 
         if st.button("Upload Another Image"):
             st.rerun()
