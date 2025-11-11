@@ -2,9 +2,37 @@ import streamlit as st
 import os
 from PIL import Image
 import requests
+import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
-predict_url = "http://localhost:8000/predict/"
+predict_url = "https://breast-cancer-histopathology-image.onrender.com/predict/"
+
+
+# Configure session with retries and longer timeout
+def create_session_with_retries():
+    """Create a requests session with automatic retries for slow/sleeping APIs"""
+    session = requests.Session()
+
+    # Configure retry strategy
+    retry_strategy = Retry(
+        total=5,  # Total number of retries
+        backoff_factor=1,  # Wait 1, 2, 4, 8, 16 seconds between retries
+        status_forcelist=[429, 500, 502, 503, 504],  # Retry on these status codes
+        allowed_methods=["POST", "GET"],  # Retry on POST and GET requests
+    )
+
+    # Mount the retry strategy to both HTTP and HTTPS
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
+    return session
+
+
+# Create a session instance
+session = create_session_with_retries()
 
 st.set_page_config(
     page_title="Breast Cancer Classification",
@@ -120,7 +148,7 @@ with col2:
 
     uploaded_file = st.file_uploader(
         "Upload a file",
-        type=["png", "jpg", "jpeg", "tif", "tiff"],
+        type=["png", "jpg", "jpeg", "tif", "tiff", "HEIC"],
         help="Drag and drop your files here or click to upload",
         label_visibility="collapsed",
     )
@@ -143,17 +171,30 @@ with col2:
 
         # Classification button
         if st.button("Classify Image", type="primary"):
-            with st.spinner("Classifying..."):
+            with st.spinner(
+                "Classifying... (This may take a minute if the API is waking up)"
+            ):
                 try:
-                    # Call FastAPI backend
+                    # Call FastAPI backend with retries and longer timeout
                     uploaded_file.seek(0)
-                    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
-                    response = requests.post(predict_url, files=files)
-                    
+                    files = {
+                        "file": (uploaded_file.name, uploaded_file, uploaded_file.type)
+                    }
+
+                    # Attempt with retry logic and 120-second timeout
+                    # The timeout allows the free Render service time to wake up
+                    response = session.post(
+                        predict_url,
+                        files=files,
+                        timeout=120,  # 2 minutes timeout for slow/sleeping APIs
+                    )
+
                     if response.status_code == 200:
                         result = response.json()
-                        
-                        st.markdown('<div class="results-container">', unsafe_allow_html=True)
+
+                        st.markdown(
+                            '<div class="results-container">', unsafe_allow_html=True
+                        )
                         st.success("✅ Classification Complete!")
 
                         # Display results
@@ -161,21 +202,36 @@ with col2:
                         col_a, col_b = st.columns(2)
                         with col_a:
                             st.metric(
-                                "Classification", 
-                                result["classification"], 
-                                delta=f"{result['confidence']}% confidence"
+                                "Classification",
+                                result["classification"],
+                                delta=f"{result['confidence']}% confidence",
                             )
                         with col_b:
-                            st.metric("Processing Time", f"{result['processing_time']}s")
+                            st.metric(
+                                "Processing Time", f"{result['processing_time']}s"
+                            )
 
                         st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        st.error(f"Error: {response.json().get('detail', 'Unknown error')}")
-                        
+                        st.error(
+                            f"❌ API Error: {response.status_code} - {response.json().get('detail', 'Unknown error')}"
+                        )
+
+                except requests.exceptions.Timeout:
+                    st.error(
+                        "⏱️ **Request Timeout**: The API took too long to respond. "
+                        "This may happen if the free Render service is sleeping. "
+                        "Please wait a moment and try again. The backend should be warmed up by then."
+                    )
                 except requests.exceptions.ConnectionError:
-                    st.error("❌ Cannot connect to API server. Please ensure the FastAPI server is running on http://localhost:8000")
+                    st.error(
+                        "❌ **Connection Error**: Cannot connect to the API server. "
+                        "The backend service might be starting up. Please try again in a few moments."
+                    )
+                except requests.exceptions.RequestException as e:
+                    st.error(f"❌ **Request Failed**: {str(e)}")
                 except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                    st.error(f"❌ **Unexpected Error**: {str(e)}")
 
         if st.button("Upload Another Image"):
             st.rerun()
