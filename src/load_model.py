@@ -12,78 +12,32 @@ import tensorflow_hub as hub
 from PIL import Image
 import numpy as np
 
-# Method 1: Try loading with compile=False
-try:
-    best_model = tf.keras.models.load_model(
-        "notebooks/models/best_model.h5",
-        compile=False,
-        safe_mode=False,
-    )
-except Exception as e:
-    print(f"Method 1 failed: {e}")
 
-    # Method 2: Load only weights if you have the model architecture
+base_model = hub.KerasLayer(
+    "https://tfhub.dev/google/efficientnet/b0/feature-vector/1",
+    trainable=False,
+    name="efficientnetv2-b0",
+)
+
+
+def load_model(model_path):
+    print("Loading model from:", model_path)
     try:
-        # Recreate the model architecture (you'll need to match your original model)
-        best_model = Sequential(
-            [
-                Input(shape=(244, 244, 3), name="input_layer"),
-                # Wrap the base_model in a functional API to make it compatible with Sequential
-                tf.keras.layers.Lambda(
-                    lambda x: base_model(x), name="base_model_wrapper"
-                ),
-                # Add dropout right after base model to prevent overfitting
-                Dropout(0.2, name="dropout_base"),
-                BatchNormalization(name="bn_base"),
-                # First dense layer with regularization
-                Dense(
-                    512,
-                    activation="relu",
-                    kernel_regularizer=tf.keras.regularizers.l2(0.001),
-                    bias_regularizer=tf.keras.regularizers.l2(0.001),
-                    name="dense_1",
-                ),
-                BatchNormalization(name="bn_1"),
-                Dropout(0.5, name="dropout_1"),
-                # Second dense layer with regularization
-                Dense(
-                    256,
-                    activation="relu",
-                    kernel_regularizer=tf.keras.regularizers.l2(0.001),
-                    bias_regularizer=tf.keras.regularizers.l2(0.001),
-                    name="dense_2",
-                ),
-                BatchNormalization(name="bn_2"),
-                Dropout(0.4, name="dropout_2"),
-                # Third dense layer
-                Dense(
-                    128,
-                    activation="relu",
-                    kernel_regularizer=tf.keras.regularizers.l2(0.001),
-                    name="dense_3",
-                ),
-                BatchNormalization(name="bn_3"),
-                Dropout(0.3, name="dropout_3"),
-                # Output layer
-                Dense(1, activation="sigmoid", name="output_layer"),
-            ],
-            name="breast_cancer_classifier",
+        best_model = tf.keras.models.load_model(
+            model_path,
+            custom_objects={
+                "base_model": base_model,
+                # "KerasLayer": hub.KerasLayer,
+            },
+            compile=False,
+            safe_mode=False,
         )
-        best_model.load_weights("notebooks/models/best_model.h5")
-    except Exception as e2:
-        print(f"Method 2 failed: {e2}")
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        return None
 
-        # Method 3: Try loading with custom_objects
-        try:
-            best_model = tf.keras.models.load_model(
-                "notebooks/models/best_model.h5",
-                custom_objects=None,
-                compile=False,
-                safe_mode=False,
-            )
-        except Exception as e3:
-            print(f"All methods failed. Error: {e3}")
-            raise
+    return best_model
+
 
 # Alternative: Try loading the .keras file instead
 # final_model = tf.keras.models.load_model(
@@ -98,6 +52,8 @@ def predict_image(img_path, IMAGE_SIZE):
     img = tf.image.resize(img, [IMAGE_SIZE, IMAGE_SIZE])
     img = img / 255.0
     img = tf.expand_dims(img, 0)
+
+    best_model = load_model("notebooks/models/best_model.keras")
 
     prediction = best_model.predict(img, verbose=0)
 

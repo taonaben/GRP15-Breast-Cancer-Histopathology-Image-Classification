@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from PIL import Image
 import requests
-import io
+
 
 predict_url = "http://localhost:8000/predict/"
 
